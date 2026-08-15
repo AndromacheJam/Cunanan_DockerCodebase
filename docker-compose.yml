@@ -1,0 +1,136 @@
+version: "3.8"
+
+networks:
+  app_network:
+    driver: bridge
+
+services:
+  # ---------------------------------------------------------------
+  # 1. NGINX - Web server, routes port 80 -> Main System (Hotel)
+  #                    and port 81 -> Microservice (Employee API)
+  # ---------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: cunanan_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "81:81"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./main_system:/var/www/main_system
+      - ./microservice:/var/www/microservice
+    depends_on:
+      - php
+      - php_microservice
+    networks:
+      - app_network
+
+  # ---------------------------------------------------------------
+  # 2. PHP - Application server for the MAIN SYSTEM (Hotel Reservation)
+  # ---------------------------------------------------------------
+  php:
+    build:
+      context: ./php
+      dockerfile: Dockerfile
+    container_name: cunanan_php_main
+    restart: unless-stopped
+    volumes:
+      - ./main_system:/var/www/main_system
+      - ./php/conf.d/php.ini:/usr/local/etc/php/conf.d/custom.ini
+    working_dir: /var/www/main_system
+    depends_on:
+      - mysql
+    networks:
+      - app_network
+
+  # ---------------------------------------------------------------
+  # 3. PHP MICROSERVICE - Application server for the EMPLOYEE API
+  #    (built from the same base Dockerfile, second container so the
+  #    two systems run as independent containers on different ports)
+  # ---------------------------------------------------------------
+  php_microservice:
+    build:
+      context: ./php
+      dockerfile: Dockerfile
+    container_name: cunanan_php_microservice
+    restart: unless-stopped
+    volumes:
+      - ./microservice:/var/www/microservice
+      - ./php/conf.d/php.ini:/usr/local/etc/php/conf.d/custom.ini
+    working_dir: /var/www/microservice
+    depends_on:
+      - mysql
+    networks:
+      - app_network
+
+  # ---------------------------------------------------------------
+  # 4. MYSQL - Shared database server (separate schemas per system)
+  # ---------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: cunanan_mysql
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: hotel_db
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql/init:/docker-entrypoint-initdb.d
+      - ./mysql/data:/var/lib/mysql
+    networks:
+      - app_network
+
+  # ---------------------------------------------------------------
+  # 5. PHPMYADMIN - Database management UI
+  # ---------------------------------------------------------------
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: cunanan_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+    networks:
+      - app_network
+
+  # ---------------------------------------------------------------
+  # 6. WORKSPACE - Development / CLI environment (composer, artisan, etc.)
+  # ---------------------------------------------------------------
+  workspace:
+    image: devilbox/php-fpm:8.2-work
+    container_name: cunanan_workspace
+    restart: unless-stopped
+    volumes:
+      - ./:/shared/httpd
+    working_dir: /shared/httpd
+    tty: true
+    depends_on:
+      - mysql
+    networks:
+      - app_network
+
+  # ---------------------------------------------------------------
+  # 7. REDIS - Caching layer
+  # ---------------------------------------------------------------
+  redis:
+    image: redis:alpine
+    container_name: cunanan_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis/data:/data
+    networks:
+      - app_network

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hotel Reservation System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="topbar">
+        <h1>🏨 Hotel Reservation System</h1>
+        <nav>
+            <a href="index.html" class="active">Home</a>
+            <a href="read.php">View Reservations</a>
+            <a href="create.php">New Reservation</a>
+        </nav>
+    </header>
+
+    <main class="container hero">
+        <h2>Welcome to the Hotel Reservation System</h2>
+        <p>
+            This is the <strong>Main System</strong> (running on port 80), a full CRUD
+            application for managing hotel reservations. It integrates live with the
+            <strong>Employee Microservice</strong> (running on port 81) to populate the
+            "Assigned Staff" dropdown on the Create and Update forms.
+        </p>
+
+        <div class="card-grid">
+            <a class="card" href="read.php">
+                <h3>📋 View Reservations</h3>
+                <p>Browse, edit, and delete existing reservations.</p>
+            </a>
+            <a class="card" href="create.php">
+                <h3>➕ New Reservation</h3>
+                <p>Create a reservation and assign hotel staff.</p>
+            </a>
+            <a class="card" href="http://localhost:81/" target="_blank" rel="noopener">
+                <h3>🧩 Employee Microservice</h3>
+                <p>View the raw API powering the staff dropdown (port 81).</p>
+            </a>
+        </div>
+    </main>
+</body>
+</html>
