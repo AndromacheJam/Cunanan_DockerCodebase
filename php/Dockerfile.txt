@@ -1,0 +1,34 @@
+FROM devilbox/php-fpm:8.2-work
+
+# Switch to root to install extensions
+USER root
+
+# Install system dependencies and PHP extensions needed by both
+# the Main System (Hotel Reservation CRUD) and the Microservice (Employee API)
+RUN apt-get update && apt-get install -y \
+        libzip-dev \
+        libpng-dev \
+        libjpeg-dev \
+        libfreetype6-dev \
+        curl \
+    && docker-php-source extract \
+    && find /usr/src/php -exec touch -c {} \; \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo \
+        pdo_mysql \
+        mysqli \
+        gd \
+        zip \
+        curl \
+    && docker-php-source delete \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy custom php.ini settings
+COPY conf.d/php.ini /usr/local/etc/php/conf.d/custom.ini
+
+WORKDIR /var/www
+
+EXPOSE 9000
+
+CMD ["php-fpm"]
